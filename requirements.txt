@@ -1,0 +1,13 @@
+# Vanna 2.0 from GitHub
+git+https://github.com/vanna-ai/vanna.git@v2#egg=vanna[openai]
+
+# FastAPI and server
+uvicorn[standard]>=0.24.0
+fastapi>=0.104.0
+
+# PostgreSQL
+psycopg2-binary>=2.9.9
+
+# Additional dependencies
+pydantic>=2.0.0
+python-dotenv>=1.0.0

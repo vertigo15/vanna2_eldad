@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  vanna-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vanna2-app
+    ports:
+      - "8000:8000"
+    environment:
+      # Azure OpenAI
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION}
+      - AZURE_OPENAI_DEPLOYMENT_NAME=${AZURE_OPENAI_DEPLOYMENT_NAME}
+      
+      # Data Source (Your business database)
+      - DATA_SOURCE_HOST=${DATA_SOURCE_HOST}
+      - DATA_SOURCE_PORT=${DATA_SOURCE_PORT}
+      - DATA_SOURCE_DB=${DATA_SOURCE_DB}
+      - DATA_SOURCE_USER=${DATA_SOURCE_USER}
+      - DATA_SOURCE_PASSWORD=${DATA_SOURCE_PASSWORD}
+      
+      # Vanna Storage (Optional)
+      - USE_PERSISTENT_STORAGE=${USE_PERSISTENT_STORAGE:-false}
+      - VANNA_STORAGE_HOST=${VANNA_STORAGE_HOST}
+      - VANNA_STORAGE_PORT=${VANNA_STORAGE_PORT}
+      - VANNA_STORAGE_DB=${VANNA_STORAGE_DB}
+      - VANNA_STORAGE_USER=${VANNA_STORAGE_USER}
+      - VANNA_STORAGE_PASSWORD=${VANNA_STORAGE_PASSWORD}
+      
+      # App config
+      - PORT=8000
+      - LOG_LEVEL=info
+    
+    volumes:
+      - ./logs:/app/logs
+    
+    restart: unless-stopped
+    
+    networks:
+      - vanna-network
+
+networks:
+  vanna-network:
+    driver: bridge
+# ```
+
+# ## Architecture Diagram
+# """"
+# ┌─────────────────────────────────────────────────────┐
+# │                                                     │
+# │                   VANNA 2.0 APP                     │
+# │                                                     │
+# │  ┌─────────────────────────────────────────────┐  │
+# │  │  1. Azure OpenAI (LLM)                      │  │
+# │  │     - Generates SQL from natural language   │  │
+# │  │     - gpt-4 deployment                      │  │
+# │  └─────────────────────────────────────────────┘  │
+# │                                                     │
+# │  ┌─────────────────────────────────────────────┐  │
+# │  │  2. Data Source (PostgreSQL) ⭐ MAIN        │  │
+# │  │     - Your business database                │  │
+# │  │     - Contains: customers, sales, products  │  │
+# │  │     - Vanna executes SQL queries here       │  │
+# │  └─────────────────────────────────────────────┘  │
+# │                                                     │
+# │  ┌─────────────────────────────────────────────┐  │
+# │  │  3. Vanna Storage (Optional)                │  │
+# │  │     - In-memory (default) OR                │  │
+# │  │     - PostgreSQL for persistence            │  │
+# │  │     - Stores: conversations, metadata       │  │
+# │  └─────────────────────────────────────────────┘  │
+# │                                                     │
+# └─────────────────────────────────────────────────────┘
+# """"
