@@ -22,6 +22,12 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Copy application code
 COPY main.py .
+COPY azure_openai_llm.py .
+COPY train_vanna.py .
+COPY knowledge_base.py .
+
+# Copy training data
+COPY training_data/ ./training_data/
 
 # Create directories for logs and data
 RUN mkdir -p /app/logs /app/data
@@ -40,4 +46,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
 
 # Run the application
+# Note: Vanna 2.0 Agent doesn't require traditional training
+# It uses the LLM and can introspect the database schema dynamically
 CMD ["python", "main.py"]

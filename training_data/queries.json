@@ -1,0 +1,226 @@
+{
+  "question_sql_pairs": [
+    {
+      "category": "sales_overview",
+      "question": "What is our total revenue?",
+      "sql": "SELECT SUM(salesamount) as total_revenue FROM (SELECT salesamount FROM factinternetsales UNION ALL SELECT salesamount FROM factresellersales) all_sales",
+      "difficulty": "simple"
+    },
+    {
+      "category": "sales_overview",
+      "question": "What is our total revenue from internet sales?",
+      "sql": "SELECT SUM(salesamount) as internet_revenue FROM factinternetsales",
+      "difficulty": "simple"
+    },
+    {
+      "category": "sales_overview",
+      "question": "What is our total revenue from reseller sales?",
+      "sql": "SELECT SUM(salesamount) as reseller_revenue FROM factresellersales",
+      "difficulty": "simple"
+    },
+    {
+      "category": "sales_metrics",
+      "question": "How many orders have we received?",
+      "sql": "SELECT COUNT(DISTINCT salesordernumber) as total_orders FROM (SELECT salesordernumber FROM factinternetsales UNION ALL SELECT salesordernumber FROM factresellersales) orders",
+      "difficulty": "simple"
+    },
+    {
+      "category": "sales_metrics",
+      "question": "What is the average order value?",
+      "sql": "SELECT AVG(order_total) as average_order_value FROM (SELECT salesordernumber, SUM(salesamount) as order_total FROM factinternetsales GROUP BY salesordernumber UNION ALL SELECT salesordernumber, SUM(salesamount) FROM factresellersales GROUP BY salesordernumber) orders",
+      "difficulty": "medium"
+    },
+    {
+      "category": "sales_metrics",
+      "question": "How many units have we sold?",
+      "sql": "SELECT SUM(orderquantity) as total_units FROM (SELECT orderquantity FROM factinternetsales UNION ALL SELECT orderquantity FROM factresellersales) all_sales",
+      "difficulty": "simple"
+    },
+    {
+      "category": "profitability",
+      "question": "What is our total profit?",
+      "sql": "SELECT SUM(salesamount - totalproductcost) as total_profit FROM (SELECT salesamount, totalproductcost FROM factinternetsales UNION ALL SELECT salesamount, totalproductcost FROM factresellersales) all_sales",
+      "difficulty": "simple"
+    },
+    {
+      "category": "profitability",
+      "question": "What is our gross margin percentage?",
+      "sql": "SELECT (SUM(salesamount - totalproductcost) / NULLIF(SUM(salesamount), 0)) * 100 as gross_margin_pct FROM (SELECT salesamount, totalproductcost FROM factinternetsales UNION ALL SELECT salesamount, totalproductcost FROM factresellersales) all_sales",
+      "difficulty": "medium"
+    },
+    {
+      "category": "profitability",
+      "question": "What is the profit margin by product category?",
+      "sql": "SELECT pc.englishproductcategoryname as category, SUM(sales.salesamount - sales.totalproductcost) as profit, (SUM(sales.salesamount - sales.totalproductcost) / NULLIF(SUM(sales.salesamount), 0)) * 100 as profit_margin_pct FROM (SELECT productkey, salesamount, totalproductcost FROM factinternetsales UNION ALL SELECT productkey, salesamount, totalproductcost FROM factresellersales) sales JOIN dimproduct p ON sales.productkey = p.productkey JOIN dimproductsubcategory ps ON p.productsubcategorykey = ps.productsubcategorykey JOIN dimproductcategory pc ON ps.productcategorykey = pc.productcategorykey GROUP BY pc.englishproductcategoryname ORDER BY profit DESC",
+      "difficulty": "complex"
+    },
+    {
+      "category": "product_analysis",
+      "question": "What are our top 10 products by revenue?",
+      "sql": "SELECT p.englishproductname as product_name, SUM(sales.salesamount) as total_revenue, SUM(sales.orderquantity) as units_sold FROM (SELECT productkey, salesamount, orderquantity FROM factinternetsales UNION ALL SELECT productkey, salesamount, orderquantity FROM factresellersales) sales JOIN dimproduct p ON sales.productkey = p.productkey GROUP BY p.englishproductname ORDER BY total_revenue DESC LIMIT 10",
+      "difficulty": "medium"
+    },
+    {
+      "category": "product_analysis",
+      "question": "What are our top selling products by quantity?",
+      "sql": "SELECT p.englishproductname as product_name, SUM(sales.orderquantity) as total_quantity, SUM(sales.salesamount) as revenue FROM (SELECT productkey, salesamount, orderquantity FROM factinternetsales UNION ALL SELECT productkey, salesamount, orderquantity FROM factresellersales) sales JOIN dimproduct p ON sales.productkey = p.productkey GROUP BY p.englishproductname ORDER BY total_quantity DESC LIMIT 10",
+      "difficulty": "medium"
+    },
+    {
+      "category": "product_analysis",
+      "question": "Show me sales by product category",
+      "sql": "SELECT pc.englishproductcategoryname as category, SUM(sales.salesamount) as revenue, SUM(sales.orderquantity) as units_sold, COUNT(DISTINCT sales.salesordernumber) as order_count FROM (SELECT productkey, salesamount, orderquantity, salesordernumber FROM factinternetsales UNION ALL SELECT productkey, salesamount, orderquantity, salesordernumber FROM factresellersales) sales JOIN dimproduct p ON sales.productkey = p.productkey JOIN dimproductsubcategory ps ON p.productsubcategorykey = ps.productsubcategorykey JOIN dimproductcategory pc ON ps.productcategorykey = pc.productcategorykey GROUP BY pc.englishproductcategoryname ORDER BY revenue DESC",
+      "difficulty": "medium"
+    },
+    {
+      "category": "product_analysis",
+      "question": "Show me sales by product subcategory",
+      "sql": "SELECT ps.englishproductsubcategoryname as subcategory, pc.englishproductcategoryname as category, SUM(sales.salesamount) as revenue, SUM(sales.orderquantity) as units_sold FROM (SELECT productkey, salesamount, orderquantity FROM factinternetsales UNION ALL SELECT productkey, salesamount, orderquantity FROM factresellersales) sales JOIN dimproduct p ON sales.productkey = p.productkey JOIN dimproductsubcategory ps ON p.productsubcategorykey = ps.productsubcategorykey JOIN dimproductcategory pc ON ps.productcategorykey = pc.productcategorykey GROUP BY ps.englishproductsubcategoryname, pc.englishproductcategoryname ORDER BY revenue DESC",
+      "difficulty": "medium"
+    },
+    {
+      "category": "product_analysis",
+      "question": "Which products have never been sold?",
+      "sql": "SELECT p.englishproductname as product_name, pc.englishproductcategoryname as category, p.listprice FROM dimproduct p JOIN dimproductsubcategory ps ON p.productsubcategorykey = ps.productsubcategorykey JOIN dimproductcategory pc ON ps.productcategorykey = pc.productcategorykey WHERE p.productkey NOT IN (SELECT DISTINCT productkey FROM factinternetsales UNION SELECT DISTINCT productkey FROM factresellersales) AND p.finishedgoodsflag = TRUE",
+      "difficulty": "medium"
+    },
+    {
+      "category": "time_analysis",
+      "question": "What is our revenue by year?",
+      "sql": "SELECT d.calendaryear as year, SUM(sales.salesamount) as revenue FROM (SELECT orderdatekey, salesamount FROM factinternetsales UNION ALL SELECT orderdatekey, salesamount FROM factresellersales) sales JOIN dimdate d ON sales.orderdatekey = d.datekey GROUP BY d.calendaryear ORDER BY d.calendaryear",
+      "difficulty": "medium"
+    },
+    {
+      "category": "time_analysis",
+      "question": "What is our revenue by fiscal year?",
+      "sql": "SELECT d.fiscalyear as fiscal_year, SUM(sales.salesamount) as revenue FROM (SELECT orderdatekey, salesamount FROM factinternetsales UNION ALL SELECT orderdatekey, salesamount FROM factresellersales) sales JOIN dimdate d ON sales.orderdatekey = d.datekey GROUP BY d.fiscalyear ORDER BY d.fiscalyear",
+      "difficulty": "medium"
+    },
+    {
+      "category": "time_analysis",
+      "question": "Show me monthly revenue trend for 2013",
+      "sql": "SELECT d.monthnumberofyear as month, d.englishmonthname as month_name, SUM(sales.salesamount) as revenue FROM (SELECT orderdatekey, salesamount FROM factinternetsales UNION ALL SELECT orderdatekey, salesamount FROM factresellersales) sales JOIN dimdate d ON sales.orderdatekey = d.datekey WHERE d.calendaryear = 2013 GROUP BY d.monthnumberofyear, d.englishmonthname ORDER BY d.monthnumberofyear",
+      "difficulty": "medium"
+    },
+    {
+      "category": "time_analysis",
+      "question": "What is our revenue by quarter?",
+      "sql": "SELECT d.calendaryear as year, d.calendarquarter as quarter, SUM(sales.salesamount) as revenue FROM (SELECT orderdatekey, salesamount FROM factinternetsales UNION ALL SELECT orderdatekey, salesamount FROM factresellersales) sales JOIN dimdate d ON sales.orderdatekey = d.datekey GROUP BY d.calendaryear, d.calendarquarter ORDER BY d.calendaryear, d.calendarquarter",
+      "difficulty": "medium"
+    },
+    {
+      "category": "time_analysis",
+      "question": "Show me year-over-year revenue growth",
+      "sql": "SELECT curr.calendaryear as year, curr.revenue as current_revenue, prev.revenue as previous_revenue, ((curr.revenue - prev.revenue) / NULLIF(prev.revenue, 0)) * 100 as yoy_growth_pct FROM (SELECT d.calendaryear, SUM(sales.salesamount) as revenue FROM (SELECT orderdatekey, salesamount FROM factinternetsales UNION ALL SELECT orderdatekey, salesamount FROM factresellersales) sales JOIN dimdate d ON sales.orderdatekey = d.datekey GROUP BY d.calendaryear) curr LEFT JOIN (SELECT d.calendaryear, SUM(sales.salesamount) as revenue FROM (SELECT orderdatekey, salesamount FROM factinternetsales UNION ALL SELECT orderdatekey, salesamount FROM factresellersales) sales JOIN dimdate d ON sales.orderdatekey = d.datekey GROUP BY d.calendaryear) prev ON curr.calendaryear = prev.calendaryear + 1 ORDER BY curr.calendaryear",
+      "difficulty": "complex"
+    },
+    {
+      "category": "time_analysis",
+      "question": "What was our revenue in Q4 2013?",
+      "sql": "SELECT SUM(sales.salesamount) as q4_2013_revenue FROM (SELECT orderdatekey, salesamount FROM factinternetsales UNION ALL SELECT orderdatekey, salesamount FROM factresellersales) sales JOIN dimdate d ON sales.orderdatekey = d.datekey WHERE d.calendaryear = 2013 AND d.calendarquarter = 4",
+      "difficulty": "simple"
+    },
+    {
+      "category": "time_analysis",
+      "question": "What was our revenue last month?",
+      "sql": "SELECT SUM(sales.salesamount) as last_month_revenue FROM (SELECT orderdatekey, salesamount FROM factinternetsales UNION ALL SELECT orderdatekey, salesamount FROM factresellersales) sales JOIN dimdate d ON sales.orderdatekey = d.datekey WHERE d.fulldatealternatekey >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month') AND d.fulldatealternatekey < DATE_TRUNC('month', CURRENT_DATE)",
+      "difficulty": "medium"
+    },
+    {
+      "category": "time_analysis",
+      "question": "Show me revenue for the last 6 months",
+      "sql": "SELECT d.calendaryear as year, d.monthnumberofyear as month, d.englishmonthname as month_name, SUM(sales.salesamount) as revenue FROM (SELECT orderdatekey, salesamount FROM factinternetsales UNION ALL SELECT orderdatekey, salesamount FROM factresellersales) sales JOIN dimdate d ON sales.orderdatekey = d.datekey WHERE d.fulldatealternatekey >= CURRENT_DATE - INTERVAL '6 months' GROUP BY d.calendaryear, d.monthnumberofyear, d.englishmonthname ORDER BY d.calendaryear, d.monthnumberofyear",
+      "difficulty": "medium"
+    },
+    {
+      "category": "geography",
+      "question": "What is our revenue by sales territory?",
+      "sql": "SELECT st.salesterritoryregion as territory, st.salesterritorygroup as territory_group, COALESCE(SUM(fis.salesamount), 0) as internet_revenue, COALESCE(SUM(frs.salesamount), 0) as reseller_revenue, COALESCE(SUM(fis.salesamount), 0) + COALESCE(SUM(frs.salesamount), 0) as total_revenue FROM dimsalesterritory st LEFT JOIN factinternetsales fis ON st.salesterritorykey = fis.salesterritorykey LEFT JOIN factresellersales frs ON st.salesterritorykey = frs.salesterritorykey GROUP BY st.salesterritoryregion, st.salesterritorygroup ORDER BY total_revenue DESC",
+      "difficulty": "medium"
+    },
+    {
+      "category": "geography",
+      "question": "What are our top 5 territories by revenue?",
+      "sql": "SELECT st.salesterritoryregion as territory, SUM(sales.salesamount) as revenue FROM (SELECT salesterritorykey, salesamount FROM factinternetsales UNION ALL SELECT salesterritorykey, salesamount FROM factresellersales) sales JOIN dimsalesterritory st ON sales.salesterritorykey = st.salesterritorykey GROUP BY st.salesterritoryregion ORDER BY revenue DESC LIMIT 5",
+      "difficulty": "medium"
+    },
+    {
+      "category": "geography",
+      "question": "Show me revenue by country",
+      "sql": "SELECT g.englishcountryregionname as country, SUM(fis.salesamount) as revenue FROM factinternetsales fis JOIN dimcustomer c ON fis.customerkey = c.customerkey JOIN dimgeography g ON c.geographykey = g.geographykey GROUP BY g.englishcountryregionname ORDER BY revenue DESC",
+      "difficulty": "medium"
+    },
+    {
+      "category": "geography",
+      "question": "What is the revenue breakdown by territory group?",
+      "sql": "SELECT st.salesterritorygroup as territory_group, SUM(sales.salesamount) as revenue, COUNT(DISTINCT sales.salesordernumber) as order_count FROM (SELECT salesterritorykey, salesamount, salesordernumber FROM factinternetsales UNION ALL SELECT salesterritorykey, salesamount, salesordernumber FROM factresellersales) sales JOIN dimsalesterritory st ON sales.salesterritorykey = st.salesterritorykey GROUP BY st.salesterritorygroup ORDER BY revenue DESC",
+      "difficulty": "medium"
+    },
+    {
+      "category": "customer_analysis",
+      "question": "How many customers do we have?",
+      "sql": "SELECT COUNT(DISTINCT customerkey) as total_customers FROM factinternetsales",
+      "difficulty": "simple"
+    },
+    {
+      "category": "customer_analysis",
+      "question": "Who are our top 10 customers by revenue?",
+      "sql": "SELECT c.firstname || ' ' || c.lastname as customer_name, c.emailaddress, SUM(fis.salesamount) as total_revenue, COUNT(DISTINCT fis.salesordernumber) as order_count FROM factinternetsales fis JOIN dimcustomer c ON fis.customerkey = c.customerkey GROUP BY c.firstname, c.lastname, c.emailaddress ORDER BY total_revenue DESC LIMIT 10",
+      "difficulty": "medium"
+    },
+    {
+      "category": "customer_analysis",
+      "question": "What is the average revenue per customer?",
+      "sql": "SELECT SUM(salesamount) / COUNT(DISTINCT customerkey) as avg_revenue_per_customer FROM factinternetsales",
+      "difficulty": "simple"
+    },
+    {
+      "category": "customer_analysis",
+      "question": "Show me customer demographics breakdown",
+      "sql": "SELECT c.gender, c.maritalstatus, c.englisheducation as education, COUNT(DISTINCT c.customerkey) as customer_count, SUM(fis.salesamount) as total_revenue FROM dimcustomer c LEFT JOIN factinternetsales fis ON c.customerkey = fis.customerkey GROUP BY c.gender, c.maritalstatus, c.englisheducation ORDER BY total_revenue DESC",
+      "difficulty": "medium"
+    },
+    {
+      "category": "customer_analysis",
+      "question": "What is our revenue by customer gender?",
+      "sql": "SELECT CASE WHEN c.gender = 'M' THEN 'Male' WHEN c.gender = 'F' THEN 'Female' ELSE 'Unknown' END as gender, COUNT(DISTINCT c.customerkey) as customer_count, SUM(fis.salesamount) as revenue FROM dimcustomer c JOIN factinternetsales fis ON c.customerkey = fis.customerkey GROUP BY c.gender ORDER BY revenue DESC",
+      "difficulty": "medium"
+    },
+    {
+      "category": "customer_analysis",
+      "question": "Show me revenue by customer occupation",
+      "sql": "SELECT c.englishoccupation as occupation, COUNT(DISTINCT c.customerkey) as customer_count, SUM(fis.salesamount) as revenue, AVG(fis.salesamount) as avg_order_value FROM dimcustomer c JOIN factinternetsales fis ON c.customerkey = fis.customerkey WHERE c.englishoccupation IS NOT NULL GROUP BY c.englishoccupation ORDER BY revenue DESC",
+      "difficulty": "medium"
+    },
+    {
+      "category": "customer_analysis",
+      "question": "Which customers have not purchased in the last 12 months?",
+      "sql": "SELECT c.firstname || ' ' || c.lastname as customer_name, c.emailaddress, MAX(d.fulldatealternatekey) as last_purchase_date FROM dimcustomer c JOIN factinternetsales fis ON c.customerkey = fis.customerkey JOIN dimdate d ON fis.orderdatekey = d.datekey GROUP BY c.customerkey, c.firstname, c.lastname, c.emailaddress HAVING MAX(d.fulldatealternatekey) < CURRENT_DATE - INTERVAL '12 months'",
+      "difficulty": "complex"
+    },
+    {
+      "category": "customer_analysis",
+      "question": "How many new customers did we acquire each year?",
+      "sql": "SELECT d.calendaryear as year, COUNT(DISTINCT fis.customerkey) as new_customers FROM factinternetsales fis JOIN dimdate d ON fis.orderdatekey = d.datekey WHERE fis.orderdatekey = (SELECT MIN(orderdatekey) FROM factinternetsales WHERE customerkey = fis.customerkey) GROUP BY d.calendaryear ORDER BY d.calendaryear",
+      "difficulty": "complex"
+    },
+    {
+      "category": "reseller_analysis",
+      "question": "How many resellers do we have?",
+      "sql": "SELECT COUNT(DISTINCT resellerkey) as total_resellers FROM factresellersales",
+      "difficulty": "simple"
+    },
+    {
+      "category": "reseller_analysis",
+      "question": "Who are our top 10 resellers by revenue?",
+      "sql": "SELECT r.resellername, r.businesstype, SUM(frs.salesamount) as total_revenue, COUNT(DISTINCT frs.salesordernumber) as order_count FROM factresellersales frs JOIN dimreseller r ON frs.resellerkey = r.resellerkey GROUP BY r.resellername, r.businesstype ORDER BY total_revenue DESC LIMIT 10",
+      "difficulty": "medium"
+    },
+    {
+      "category": "reseller_analysis",
+      "question": "Show reseller revenue by business type",
+      "sql": "SELECT r.businesstype, SUM(frs.salesamount) as revenue FROM factresellersales frs JOIN dimreseller r ON frs.resellerkey = r.resellerkey GROUP BY r.businesstype ORDER BY revenue DESC",
+      "difficulty": "medium"
+    }
+  ]
+}

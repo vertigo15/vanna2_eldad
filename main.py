@@ -1,12 +1,19 @@
 import os
+from dotenv import load_dotenv
 from vanna import Agent, AgentConfig
 from vanna.servers.fastapi import VannaFastAPIServer
 from vanna.core.registry import ToolRegistry
 from vanna.core.user import UserResolver, User, RequestContext
-from vanna.integrations.openai import OpenAILlmService
 from vanna.tools import RunSqlTool
 from vanna.integrations.postgres import PostgresRunner
 import logging
+
+# Load environment variables
+load_dotenv()
+
+# Custom Azure OpenAI integration
+from azure_openai_llm import AzureOpenAILlmService
+from knowledge_base import get_knowledge_base
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -25,18 +32,16 @@ class SimpleUserResolver(UserResolver):
 # ============================================
 azure_openai_config = {
     'api_key': os.getenv('AZURE_OPENAI_API_KEY'),
-    'api_base': os.getenv('AZURE_OPENAI_ENDPOINT'),
+    'azure_endpoint': os.getenv('AZURE_OPENAI_ENDPOINT'),
     'api_version': os.getenv('AZURE_OPENAI_API_VERSION', '2024-02-15-preview'),
-    'deployment_name': os.getenv('AZURE_OPENAI_DEPLOYMENT_NAME', 'gpt-4'),
-    'api_type': 'azure'
+    'deployment_name': os.getenv('AZURE_OPENAI_DEPLOYMENT_NAME', 'gpt-4')
 }
 
-llm = OpenAILlmService(
+llm = AzureOpenAILlmService(
     api_key=azure_openai_config['api_key'],
     model=azure_openai_config['deployment_name'],
-    api_base=azure_openai_config['api_base'],
-    api_version=azure_openai_config['api_version'],
-    api_type=azure_openai_config['api_type']
+    azure_endpoint=azure_openai_config['azure_endpoint'],
+    api_version=azure_openai_config['api_version']
 )
 
 logger.info(f"✓ Azure OpenAI configured: {azure_openai_config['deployment_name']}")
@@ -60,7 +65,10 @@ logger.info(f"✓ Data source configured: {data_source_config['host']}/{data_sou
 # 3. Register tools
 # ============================================
 tools = ToolRegistry()
-tools.register(RunSqlTool(sql_runner=postgres_runner))
+run_sql_tool = RunSqlTool(sql_runner=postgres_runner)
+tools.register_local_tool(run_sql_tool, access_groups=["read_sales", "admin"])
+
+logger.info("✓ Tools registered")
 
 # ============================================
 # 4. OPTIONAL: Vanna storage for conversations
@@ -69,18 +77,23 @@ tools.register(RunSqlTool(sql_runner=postgres_runner))
 use_persistent_storage = os.getenv('USE_PERSISTENT_STORAGE', 'false').lower() == 'true'
 
 if use_persistent_storage:
-    from vanna.integrations.postgres import PostgresConversationStore
-    
-    vanna_storage_config = {
-        'host': os.getenv('VANNA_STORAGE_HOST'),
-        'port': int(os.getenv('VANNA_STORAGE_PORT', 5432)),
-        'database': os.getenv('VANNA_STORAGE_DB'),
-        'user': os.getenv('VANNA_STORAGE_USER'),
-        'password': os.getenv('VANNA_STORAGE_PASSWORD'),
-    }
-    
-    conversation_store = PostgresConversationStore(**vanna_storage_config)
-    logger.info(f"✓ Persistent storage configured: {vanna_storage_config['host']}")
+    try:
+        from vanna.integrations.postgres import PostgresConversationStore
+        
+        vanna_storage_config = {
+            'host': os.getenv('VANNA_STORAGE_HOST'),
+            'port': int(os.getenv('VANNA_STORAGE_PORT', 5432)),
+            'database': os.getenv('VANNA_STORAGE_DB'),
+            'user': os.getenv('VANNA_STORAGE_USER'),
+            'password': os.getenv('VANNA_STORAGE_PASSWORD'),
+        }
+        
+        conversation_store = PostgresConversationStore(**vanna_storage_config)
+        logger.info(f"✓ Persistent storage configured: {vanna_storage_config['host']}")
+    except ImportError:
+        from vanna.integrations.local import MemoryConversationStore
+        conversation_store = MemoryConversationStore()
+        logger.warning("⚠ PostgresConversationStore not available, using in-memory storage")
 else:
     from vanna.integrations.local import MemoryConversationStore
     conversation_store = MemoryConversationStore()
@@ -102,6 +115,17 @@ agent = Agent(
     conversation_store=conversation_store,
     config=config
 )
+
+# ============================================
+# 6. Load Knowledge Base (Training Data)
+# ============================================
+try:
+    kb = get_knowledge_base()
+    logger.info(f"✓ Knowledge base loaded and cached: {kb.get_stats()}")
+    logger.info(f"✓ System context ready ({len(kb.get_system_context())} chars)")
+except Exception as e:
+    logger.warning(f"⚠ Could not load knowledge base: {e}")
+    kb = None
 
 # Create server
 server = VannaFastAPIServer(agent)

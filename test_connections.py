@@ -6,11 +6,11 @@ def test_postgres():
     """Test PostgreSQL connection"""
     try:
         conn = psycopg2.connect(
-            host=os.getenv('POSTGRES_HOST'),
-            port=os.getenv('POSTGRES_PORT'),
-            database=os.getenv('POSTGRES_DB'),
-            user=os.getenv('POSTGRES_USER'),
-            password=os.getenv('POSTGRES_PASSWORD')
+            host=os.getenv('DATA_SOURCE_HOST'),
+            port=os.getenv('DATA_SOURCE_PORT'),
+            database=os.getenv('DATA_SOURCE_DB'),
+            user=os.getenv('DATA_SOURCE_USER'),
+            password=os.getenv('DATA_SOURCE_PASSWORD')
         )
         cursor = conn.cursor()
         cursor.execute('SELECT version();')
