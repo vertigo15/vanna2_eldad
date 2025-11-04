@@ -259,6 +259,11 @@
       "term": "Delivery Time",
       "definition": "Number of days between order date and ship date",
       "category": "operations"
+    },
+    {
+      "term": "Internet Sales Table (factinternetsales)",
+      "definition": "The fact table containing all direct online sales. Table name: factinternetsales. Contains columns: productkey, orderdatekey, duedatekey, shipdatekey, customerkey, promotionkey, currencykey, salesterritorykey, salesordernumber, salesorderlinenumber, orderquantity, unitprice, extendedamount, totalproductcost, salesamount, taxamt, freight, orderdate, duedate, shipdate. Use this for all 'internet sales' or 'online sales' queries.",
+      "category": "table_reference"
     }
   ],
   "business_rules": [
@@ -285,6 +290,10 @@
     {
       "rule": "Territory Assignment",
       "description": "Each sale must be assigned to a sales territory. Use geography-based assignment for internet sales and reseller location for reseller sales"
+    },
+    {
+      "rule": "Internet Sales vs Reseller Sales",
+      "description": "Internet sales come from factinternetsales table (direct customers). Reseller sales come from factresellersales table (business partners). When user mentions 'internet', 'online', 'direct', or 'customer sales', use factinternetsales. When they mention 'reseller', 'partner', or 'wholesale', use factresellersales."
     }
   ]
 }
